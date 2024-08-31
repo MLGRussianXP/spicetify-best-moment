@@ -7,6 +7,7 @@ async function main() {
     return;
   }
 
+  // Boundaries
   const style = document.createElement("style");
   style.innerHTML = `
   #best-moment-start, #best-moment-end {
@@ -38,6 +39,7 @@ async function main() {
   bar.append(startMark);
   bar.append(endMark);
 
+  // Logic
   let start: number | null = null;
   let end: number | null = null;
 
@@ -80,18 +82,21 @@ async function main() {
   }
 
   Spicetify.Player.addEventListener("onprogress", () => {
-    if (start !== null && end !== null) {
-      const percent = Spicetify.Player.getProgressPercent();
-      if (percent < start) {
-        Spicetify.Player.seek(start);
-      } else if (percent >= end) {
-        Spicetify.Player.next();
-      }
+    if (start === null && end === null) {
+      return;
+    }
+
+    const percent = Spicetify.Player.getProgressPercent();
+    if (start !== null && percent < start) {
+      Spicetify.Player.seek(start);
+    } else if (end != null && percent >= end) {
+      Spicetify.Player.next();
     }
   });
 
   Spicetify.Player.addEventListener("songchange", reset);
 
+  // Widget
   const widget = new Spicetify.Playbar.Widget(
     "Best Moment",
     "clock",
