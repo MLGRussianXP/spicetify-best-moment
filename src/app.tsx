@@ -58,8 +58,7 @@ async function main() {
   }
 
   function reset() {
-    start = null;
-    end = null;
+    start = end = null;
     drawOnBar();
   }
 
@@ -68,7 +67,10 @@ async function main() {
     if (end !== null && percent > end) {
       return;
     }
+
     start = percent;
+    Spicetify.Platform.LocalStorageAPI.setItem(`${Spicetify.Player.data.item.uid}-best-moment-start`, start);
+
     drawOnBar();
   }
 
@@ -77,11 +79,23 @@ async function main() {
     if (start !== null && percent < start) {
       return;
     }
+
     end = percent;
+    Spicetify.Platform.LocalStorageAPI.setItem(`${Spicetify.Player.data.item.uid}-best-moment-end`, end);
+
     drawOnBar();
   }
 
-  Spicetify.Player.addEventListener("onprogress", () => {
+  // Events
+  let debouncing = 0;
+  Spicetify.Player.addEventListener("onprogress", (event) => {
+    if (debouncing) {
+      if (event.timeStamp - debouncing > 1000) {
+        debouncing = 0;
+      }
+      return;
+    }
+
     if (start === null && end === null) {
       return;
     }
@@ -89,12 +103,26 @@ async function main() {
     const percent = Spicetify.Player.getProgressPercent();
     if (start !== null && percent < start) {
       Spicetify.Player.seek(start);
-    } else if (end != null && percent >= end) {
+    } else if (end !== null && percent >= end) {
+      reset();
       Spicetify.Player.next();
     }
   });
 
-  Spicetify.Player.addEventListener("songchange", reset);
+  Spicetify.Player.addEventListener("songchange", (event) => {
+    reset();
+
+    let storage_start = Spicetify.Platform.LocalStorageAPI.getItem(`${event.data.item.uid}-best-moment-start`);
+    let storage_end = Spicetify.Platform.LocalStorageAPI.getItem(`${event.data.item.uid}-best-moment-end`);
+
+    if (typeof storage_start === "number")
+      start = storage_start;
+
+    if (typeof storage_end === "number")
+      end = storage_end;
+
+    drawOnBar();
+  });
 
   // Widget
   const widget = new Spicetify.Playbar.Widget(
@@ -126,6 +154,10 @@ async function main() {
             className="custom-button"
             onClick={() => {
               Spicetify.PopupModal.hide();
+
+              Spicetify.Platform.LocalStorageAPI.clearItem(`${Spicetify.Player.data.item.uid}-best-moment-start`);
+              Spicetify.Platform.LocalStorageAPI.clearItem(`${Spicetify.Player.data.item.uid}-best-moment-end`);
+
               reset();
             }}
             style={{ backgroundColor: "#b10f1d" }}
