@@ -12,8 +12,16 @@ async function main() {
   #best-moment-start, #best-moment-end {
       position: absolute;
       font-weight: bolder;
-      font-size: 15px;
-      top: -7px;
+      font-size: 16px;
+      top: -6px;
+  }
+  
+  #best-moment-start {
+      color: #1dcd5b;
+  }
+
+  #best-moment-end {
+      color: #e64a19;
   }
   `;
   document.head.appendChild(style);
@@ -30,17 +38,21 @@ async function main() {
   bar.append(startMark);
   bar.append(endMark);
 
-  let start = null;
-  let end = null;
+  let start: number | null = null;
+  let end: number | null = null;
 
   function drawOnBar() {
-    if (start === null && end === null) {
-      startMark.hidden = endMark.hidden = true;
-      return;
+    if (start === null) startMark.hidden = true;
+    if (end === null) endMark.hidden = true;
+
+    if (start !== null) {
+      startMark.hidden = false;
+      startMark.style.left = `${start * 100}%`;
     }
-    startMark.hidden = endMark.hidden = false;
-    startMark.style.left = `${start * 100}%`;
-    endMark.style.left = `${end * 100}%`;
+    if (end !== null) {
+      endMark.hidden = false;
+      endMark.style.left = `${end * 100}%`;
+    }
   }
 
   function reset() {
@@ -49,28 +61,22 @@ async function main() {
     drawOnBar();
   }
 
-  function setMarker(event) {
-    const { x, width } = bar.getBoundingClientRect();
-    const percent = (event.clientX - x) / width;
-
-    if (start === null) {
-      start = percent;
-      startMark.style.left = `${start * 100}%`;
-    } else {
-      end = percent;
-      if (start > end) {
-        [start, end] = [end, start];
-        startMark.style.left = `${start * 100}%`;
-        endMark.style.left = `${end * 100}%`;
-      }
-      bar.removeEventListener("click", setMarker);
+  function setStart() {
+    let percent = Spicetify.Player.getProgressPercent()
+    if (end !== null && percent > end) {
+      return;
     }
+    start = percent;
     drawOnBar();
   }
 
-  function startCapture() {
-    startMark.hidden = endMark.hidden = false;
-    bar.addEventListener("click", setMarker);
+  function setEnd() {
+    let percent = Spicetify.Player.getProgressPercent()
+    if (start !== null && percent < start) {
+      return;
+    }
+    end = percent;
+    drawOnBar();
   }
 
   Spicetify.Player.addEventListener("onprogress", () => {
@@ -86,59 +92,6 @@ async function main() {
 
   Spicetify.Player.addEventListener("songchange", reset);
 
-  function MenuItem({ title, onClick }) {
-    return Spicetify.React.createElement(
-      Spicetify.ReactComponent.MenuItem,
-      { onClick },
-      title
-    );
-  }
-
-  const contextMenu = document.createElement("div");
-  contextMenu.id = "best-moment-context-menu";
-  contextMenu.style.position = "absolute";
-  contextMenu.hidden = true;
-  document.body.appendChild(contextMenu);
-
-  function openContextMenu(event) {
-    const { x, y } = event;
-    contextMenu.style.transform = `translate(${x}px, ${y}px)`;
-    contextMenu.hidden = false;
-    event.preventDefault();
-  }
-
-  function closeContextMenu() {
-    contextMenu.hidden = true;
-  }
-
-  function createMenu() {
-    const menu = Spicetify.React.createElement(
-      "ul",
-      { className: "main-contextMenu-menu" },
-      Spicetify.React.createElement(MenuItem, {
-        title: "Best Moment: Capture",
-        onClick: () => {
-          closeContextMenu();
-          startCapture();
-        },
-      }),
-      Spicetify.React.createElement(MenuItem, {
-        title: "Best Moment: Reset",
-        onClick: () => {
-          closeContextMenu();
-          reset();
-        },
-      })
-    );
-
-    Spicetify.ReactDOM.render(menu, contextMenu);
-  }
-
-  createMenu();
-
-  bar.oncontextmenu = openContextMenu;
-  window.addEventListener("click", closeContextMenu);
-
   const widget = new Spicetify.Playbar.Widget(
     "Best Moment",
     "clock",
@@ -149,17 +102,28 @@ async function main() {
             className="custom-button"
             onClick={() => {
               Spicetify.PopupModal.hide();
-              startCapture();
+              setStart();
             }}
           >
-            Capture
+            Set start
           </button>
+          <button
+            className="custom-button"
+            onClick={() => {
+              Spicetify.PopupModal.hide();
+              setEnd();
+            }}
+          >
+            Set end
+          </button>
+          <br />
           <button
             className="custom-button"
             onClick={() => {
               Spicetify.PopupModal.hide();
               reset();
             }}
+            style={{ backgroundColor: "#b10f1d" }}
           >
             Reset
           </button>
@@ -180,6 +144,7 @@ async function main() {
                 cursor: pointer;
                 font-size: 14px;
                 margin-right: 10px;
+                margin-top: 8px;
             }
         `;
       document.head.appendChild(style);
@@ -192,6 +157,8 @@ async function main() {
     false,
     false
   );
+
+  widget.register();
 }
 
 export default main;
