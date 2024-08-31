@@ -1,0 +1,13 @@
+[
+    {
+        "name": "Best Moment",
+        "description": "Listen to the selected segment of the track. Capture the best moment of your favorite music.",
+        "preview": "assets/preview.png",
+        "main": "dist/best-moment.js",
+        "readme": "README.md",
+        "branch": "main",
+        "authors": [
+            { "name": "dkqz", "url": "https://github.com/MLGRussianXP" }
+        ]
+    }
+]
